@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RallyTracer — shot-by-shot match telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="setup" id="fileWarn" style="display:none; border-color:#5a3a1a; background:#241a10">
+    <span style="font-family:var(--mono); font-size:12px; color:var(--amber); line-height:1.6">
+      ⚠ This file is open directly from disk (file://). Browsers block YouTube from loading under that protocol.
+      Serve it instead — easiest is opening a terminal in this folder and running <code style="color:#fff">python3 -m http.server 8000</code>,
+      then visiting <code style="color:#fff">http://localhost:8000/squash-tagger.html</code>.
+    </span>
+  </div>
+  <div class="pagegrid">
+  <header>
+    <div class="brand">
+      <h1>RallyTracer</h1>
+      <span class="sub">shot-by-shot match telemetry</span>
+    </div>
+    <div class="hdr-url">
+      <div class="fld vidurl"><label>YouTube match URL</label><input type="text" id="vidurl" placeholder="https://www.youtube.com/watch?v=…"></div>
+      <button class="btn pri" id="loadBtn">Load video</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: video -->
+    <div class="card" id="videoCard">
+      <div class="card-h">
+        <span class="t" id="rateLab">1×</span>
+        <div class="scoreboard">
+          <div class="sc" id="scA"><input type="text" id="inA" class="nm-in" value="Player A"><span class="pts" id="ptsA">0</span><span class="games" id="gmA"></span></div>
+          <div class="hdr-center">
+            <span class="vs">vs</span>
+            <button class="btn gho" id="serveBtn" title="tap to swap the server">Server: A ⇄</button>
+            <span class="bestof-lab" id="bestOfLab">best of 5</span>
+            <span class="matchover" id="matchOverChip" style="display:none"></span>
+          </div>
+          <div class="sc" id="scB"><input type="text" id="inB" class="nm-in" value="Player B"><span class="pts" id="ptsB">0</span><span class="games" id="gmB"></span></div>
+        </div>
+        <button class="btn gho" id="guideBtn" title="How to tag — open the guided tour">?</button>
+      </div>
+      <div class="card-b">
+        <div class="video-frame">
+          <div id="player"></div>
+          <div class="video-empty" id="vidEmpty">Paste a YouTube URL above and press Load.<br>The video plays here; tag shots from the court →</div>
+        </div>
+        <div class="vctrl">
+          <button class="vbtn" id="back5" title="Back 5s">«5</button>
+          <button class="vbtn" id="back2" title="Back 2s">«2</button>
+          <button class="vbtn wide" id="playBtn" title="Play / pause (Space)">Play</button>
+          <button class="vbtn" id="fwd2" title="Forward 2s">2»</button>
+          <button class="vbtn" id="r025" title="Quarter speed">.25×</button>
+          <button class="vbtn" id="r05" title="Half speed">.5×</button>
+          <button class="vbtn" id="r075" title="Three-quarter speed">.75×</button>
+          <button class="vbtn on" id="r1" title="Full speed">1×</button>
+          <span class="tc" id="tc">0:00.0</span>
+          <span id="kbWarn">⌨ keys inactive — click outside the video</span>
+        </div>
+        <div class="legend">
+          Rewind freely — review the replay at any speed and tag shots as you go.
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: court + tagging -->
+    <div class="card" id="tagCard">
+      <div class="card-h"><span class="t">Court — tap where each shot is struck from</span><span class="t" id="strikerLab">A to hit</span></div>
+      <div class="card-b">
+        <div class="strokePop" id="strokePop" style="display:none">
+          <div class="spTitle">Stroke — point to:</div>
+          <div class="spBtns">
+            <button class="btn gho" id="spA">Player A</button>
+            <button class="btn gho" id="spB">Player B</button>
+          </div>
+          <span class="spCancel" id="spCancel">Cancel ×</span>
+        </div>
+        <div class="court-wrap" id="courtWrap">
+          <span class="fwall">▲ front wall ▲</span>
+          <svg class="court" id="court" viewBox="0 0 300 360" aria-label="squash court, tap a zone">
+            <!-- floor -->
+            <rect x="6" y="6" width="288" height="348" rx="4" fill="var(--maple)"/>
+            <!-- red lines: short line (front/back boundary) + half-court line + service boxes -->
+            <line x1="6" y1="186" x2="294" y2="186" stroke="var(--maple-line)" stroke-width="2.5"/>
+            <line x1="150" y1="186" x2="150" y2="354" stroke="var(--maple-line)" stroke-width="2.5"/>
+            <rect x="6" y="186" width="74" height="74" fill="none" stroke="var(--maple-line)" stroke-width="2.5" id="boxL"/>
+            <rect x="220" y="186" width="74" height="74" fill="none" stroke="var(--maple-line)" stroke-width="2.5" id="boxR"/>
+            <rect x="6" y="186" width="74" height="74" rx="3" fill="transparent" id="boxL-fill" pointer-events="none"/>
+            <rect x="220" y="186" width="74" height="74" rx="3" fill="transparent" id="boxR-fill" pointer-events="none"/>
+            <!-- 2x2 zone cells: rows F(6-186, h180) B(186-354, h168); cols L(6-150) R(150-294) -->
+            <g id="zoneG"></g>
+          </svg>
+          <div class="hint" id="hint">Set the server, then tap the <b>side</b> the serve is struck from.</div>
+        </div>
+
+        <!-- past-game browser (read-only; tagging always continues in the live game) -->
+        <div class="gamepills" id="gamePills" style="display:none"></div>
+
+        <!-- live tape -->
+        <div class="tape" id="tape"><span class="tape-empty">No shots yet. Rally 1 — tap the side the serve is struck from.</span></div>
+
+        <!-- last-shot editor -->
+        <div class="editor empty" id="editor">
+          <div class="selbanner" id="selBanner" style="display:none"></div>
+          <div class="row" id="strokeRow">
+            <span class="k">stroke</span>
+            <span id="strokeChips"></span>
+          </div>
+          <div class="row" id="contactRow">
+            <span class="k">contact</span>
+            <button class="chip contact on" data-c="ground">ground</button>
+            <button class="chip contact" data-c="volley">volley</button>
+            <button class="chip contact" data-c="half-volley">half-volley</button>
+          </div>
+          <div class="row" id="zonesRow">
+            <span class="k">zones</span>
+            <button class="chip zedit" id="editSrc">start ✎</button>
+            <button class="chip zedit" id="editTgt">end ✎</button>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--dim)" id="zoneRead"></span>
+          </div>
+          <div class="row" id="outcomeRow">
+            <span class="k">end rally</span>
+            <button class="chip out-w" data-o="winner"><span class="oh">w</span><span class="on-name">winner</span></button>
+            <button class="chip out-e" data-o="unforced_error"><span class="oh">u</span><span class="on-name">unforced</span></button>
+            <button class="chip out-e" data-o="forced_error"><span class="oh">f</span><span class="on-name">forced</span></button>
+            <button class="chip out-s" data-o="stroke"><span class="oh">s</span><span class="on-name">stroke</span></button>
+            <button class="chip out-n" data-o="no_let"><span class="oh">n</span><span class="on-name">no let</span></button>
+            <button class="chip out-l" data-o="let"><span class="oh">l</span><span class="on-name">let</span></button>
+          </div>
+          <div class="row" id="flipRow" style="display:none">
+            <span class="k">point to</span>
+            <button class="chip flip" data-f="striker">striker</button>
+            <button class="chip flip" data-f="other">opponent</button>
+          </div>
+          <div class="row" style="margin-bottom:0">
+            <span class="k"></span>
+            <button class="btn gho" id="undoBtn">↶ Undo (z)</button>
+            <button class="btn gho" id="redoBtn">↷ Redo (y)</button>
+            <button class="btn gho" id="setTimeBtn" title="Stamp this shot with the video's current time">⊙ Set time = now</button>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--dim)">t=</span>
+            <input type="text" id="timeEdit" style="width:72px" placeholder="m:ss.s" title="Type a timestamp for the bound shot, e.g. 1:23.4 or 83.4">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <details class="controls" id="analyticsPanel">
+    <summary>Live analytics</summary>
+    <div class="controls-body">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Tab</span>
+        <button class="gpill on" data-atab="tallies">Tallies</button>
+        <button class="gpill" data-atab="court">Court</button>
+        <button class="gpill" data-atab="rallies">Rallies</button>
+        <button class="gpill" data-atab="patterns">Patterns</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Scope</span>
+        <button class="gpill on" data-ascope="match">Match</button>
+        <button class="gpill" data-ascope="game">Game</button>
+      </div>
+      <div id="anaBody"></div>
+    </div>
+  </details>
+
+  <details class="controls" id="matchControls">
+    <summary>Match controls</summary>
+    <div class="controls-body">
+      <div class="ctrl-sub">Settings</div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Match length</span>
+        <button class="btn gho boBtn" data-bo="3">Best of 3</button>
+        <button class="btn gho boBtn" data-bo="5">Best of 5</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label" title="how far before a shot the seek lands">Review lead</span>
+        <button class="btn gho" id="leadMinus">−</button>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--ink);min-width:42px;text-align:center" id="leadLab">2 s</span>
+        <button class="btn gho" id="leadPlus">+</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Sound cues</span>
+        <button class="btn gho" id="soundToggle">On</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label" title="resume playback automatically after a landing tap">Auto-resume playback</span>
+        <button class="btn gho" id="autoResumeToggle">On</button>
+      </div>
+      <div class="ctrl-sub">Score adjustments</div>
+      <div class="ctrl-group">
+        <span class="ctrl-label" title="award a point outside normal play — conduct, injury, or any referee decision">Award point</span>
+        <button class="btn gho" id="awardPtA">A</button>
+        <button class="btn gho" id="awardPtB">B</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label" title="end this game now and award it — conduct, injury, retirement">Award game</span>
+        <button class="btn gho" id="awardGameA">A</button>
+        <button class="btn gho" id="awardGameB">B</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label" title="end the whole match now and award it — conduct, injury, retirement">Award match</span>
+        <button class="btn gho" id="awardMatchA">A</button>
+        <button class="btn gho" id="awardMatchB">B</button>
+      </div>
+      <div class="ctrl-sub">Danger zone</div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Start over</span>
+        <button class="btn gho" id="newMatch">New match</button>
+        <button class="btn gho" id="resetGameBtn">Reset current game</button>
+      </div>
+    </div>
+  </details>
+
+  <div class="data">
+    <button class="btn" id="exportJson">Export JSON</button>
+    <button class="btn" id="importJson">Import JSON</button>
+    <button class="btn" id="exportCsv">Export CSV</button>
+    <button class="btn" id="importCsv">Import CSV</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    <span class="note">autosaves to this browser · open in your own browser (not in-app) so YouTube loads</span>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

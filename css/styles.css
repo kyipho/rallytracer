@@ -1,0 +1,322 @@
+  :root{
+    --bg:#0E1116; --panel:#161A21; --panel2:#1B212B; --line:#2A313D; --line2:#39424F;
+    --ink:#E8EAED; --mut:#8B93A0; --dim:#5C6470;
+    --red:#E63329; --maple:#E7DCC2; --maple-deep:#D8C9A6; --maple-line:#B5302A;
+    --amber:#F2A93B; --ok:#52B788; --bad:#E6614F;
+    --display:'Space Grotesk',sans-serif; --body:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+    --r:10px;
+    /* height budget consumed by everything above (and around) the video frame, now that header +
+       .grid are unified into .pagegrid (Change 5): wrap padding-top (18) + header row, brand+url
+       only (~50) + pagegrid row-gap (16) + video card-h holding the scoreboard (~78) + card-b
+       top padding (14) + [video frame itself] + transport/vctrl row (~44) + legend line (~28) +
+       card-b bottom padding (14) = ~262, rounded up to ~285 to stay generous (a too-small value
+       causes page scroll — bad; too-large just shrinks the video a little — safe). Kept as a
+       variable so layout changes don't require re-deriving this by hand. This is an UNVERIFIED
+       ESTIMATE — no browser check was done this pass; re-check at scroll-top for vertical
+       overflow and adjust if needed. */
+    --chrome-h:300px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--body);
+    font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1200px 600px at 70% -10%, #1a2230 0%, transparent 60%);
+  }
+  .wrap{margin:0 auto; padding:18px 20px 60px}
+  a{color:var(--amber)}
+
+  /* header: brand (left) | youtube url (right) — the scoreboard now lives on the video panel (Change 4).
+     header is now `display:contents` so brand/hdr-url become direct items of .pagegrid (Change 5). */
+  header{display:contents}
+  .brand{display:flex; flex-direction:column; gap:2px; grid-column:1; grid-row:1; align-self:end}
+  .brand h1{font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:-.01em; margin:0}
+  .brand .sub{font-family:var(--mono); font-size:12px; color:var(--dim); letter-spacing:.06em; text-transform:uppercase}
+  .hdr-url{display:flex; align-items:flex-end; gap:10px; grid-column:2; grid-row:1; align-self:end}
+  .hdr-url .vidurl{flex:1 1 auto; width:auto; min-width:0}
+  /* scoreboard: moved onto the video panel's card-h, dead-centre (Change 4) — player A | centre (vs/server/best-of/match-over) | player B */
+  .scoreboard{display:flex; align-items:center; gap:12px; font-family:var(--mono); margin:0 auto}
+  .sc{display:flex; flex-direction:column; align-items:center; min-width:92px; padding:5px 14px; background:var(--panel2); border:1px solid var(--line2); border-radius:9px}
+  .sc .nm-in{width:100px; background:transparent; border:1px solid transparent; color:var(--mut); font-family:var(--mono); font-size:12px; text-align:center; padding:1px 2px; border-radius:4px}
+  .sc .nm-in:hover{border-color:var(--line2)}
+  .sc .nm-in:focus{outline:none; border-color:var(--amber); color:var(--ink)}
+  .sc .pts{font-size:25px; font-weight:700; line-height:1.15; font-family:var(--display)}
+  .sc.serving .pts{color:var(--amber)}
+  .sc .games{display:flex; gap:4px; margin-top:3px; min-height:8px}
+  .sc .games .gdot{width:7px; height:7px; border-radius:50%; background:var(--line2); display:inline-block}
+  .sc .games .gdot.on{background:var(--amber)}
+  .sc.serving{border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset}
+  .hdr-center{display:flex; flex-direction:column; align-items:center; gap:4px}
+  .vs{color:var(--dim); font-size:12px}
+  #serveBtn{padding:3px 8px; font-size:12px}
+  .bestof-lab{font-family:var(--mono); font-size:11px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase}
+  .matchover{font-family:var(--mono); font-size:12px; color:var(--bad); border:1px solid var(--bad); border-radius:6px; padding:4px 9px}
+
+  /* layout */
+  /* pagegrid unifies the header row (brand | url) and the grid row (video | tagging) into one
+     2-column grid so the url bar lines up with, and matches the width of, the tagging card, and
+     so the two cards stretch to equal height (Change 5). header and .grid are display:contents so
+     their children (brand/hdr-url, video card/tagCard) become direct grid items placed explicitly below. */
+  .pagegrid{display:grid; grid-template-columns:minmax(0,auto) minmax(400px,1fr); gap:16px; align-items:stretch}
+  @media(max-width:960px){ .pagegrid{grid-template-columns:1fr} .brand,.hdr-url,#videoCard,#tagCard{grid-column:1; grid-row:auto} }
+  /* left column hugs the (height-fitted) video so the tagging panel takes the freed width */
+  .grid{display:contents}
+  #videoCard{grid-column:1; grid-row:2}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden}
+  .card-h{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-bottom:1px solid var(--line)}
+  .card-h .t{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut)}
+  .card-b{padding:14px}
+  #tagCard{position:relative; grid-column:2; grid-row:2; display:flex; flex-direction:column}
+  #tagCard > .card-b{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
+  #tagCard .court-wrap, #tagCard #gamePills, #tagCard #editor{flex:0 0 auto}
+  .strokePop{position:absolute; z-index:5; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--panel2); border:1px solid var(--line2); border-radius:10px; padding:14px 16px; font-family:var(--mono); font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.5); text-align:center}
+  .strokePop .spTitle{color:var(--mut); margin-bottom:10px}
+  .strokePop .spBtns{display:flex; gap:8px; margin-bottom:8px}
+  .strokePop .spCancel{color:var(--dim); cursor:pointer; font-size:12px}
+  .strokePop .spCancel:hover{color:var(--ink)}
+
+  /* setup */
+  .setup{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:16px; padding:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px}
+  .fld{display:flex; flex-direction:column; gap:5px}
+  .fld label{font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--dim)}
+  input[type=text]{background:var(--panel2); border:1px solid var(--line2); color:var(--ink); border-radius:8px; padding:8px 10px; font-family:var(--body); font-size:14px}
+  input[type=text]:focus{outline:none; border-color:var(--amber)}
+  .vidurl{width:400px; min-width:320px}
+  .nm-in{width:130px}
+
+  button{font-family:var(--body); cursor:pointer; border:none; border-radius:8px; transition:background .12s,border-color .12s,color .12s,transform .04s}
+  button:active{transform:translateY(1px)}
+  .btn{background:var(--panel2); border:1px solid var(--line2); color:var(--ink); padding:8px 13px; font-size:14px; font-weight:500}
+  .btn:hover{border-color:var(--mut)}
+  .btn.pri{background:var(--amber); border-color:var(--amber); color:#1a1205; font-weight:600}
+  .btn.pri:hover{background:#dd9425}
+  .btn.gho{background:transparent}
+
+  /* video */
+  /* height cap: at scroll-top the whole video card must fit the viewport. The pixel budget is
+     centralized in --chrome-h (root, above) since the header height changed with the Change 4
+     scoreboard expansion — see the comment there for what's included. dvh falls back gracefully;
+     vh is used as an older-browser fallback line before it. */
+  .video-frame{position:relative; aspect-ratio:16/9;
+    height:calc(100vh - var(--chrome-h)); height:calc(100dvh - var(--chrome-h));
+    width:calc((100vh - var(--chrome-h)) * 16 / 9); width:calc((100dvh - var(--chrome-h)) * 16 / 9);
+    max-width:100%; background:#000; border-radius:10px; overflow:hidden}
+  #player{width:100%; height:100%}
+  .video-empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); font-family:var(--mono); font-size:13px; text-align:center; padding:20px}
+  .vctrl{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:10px}
+  .vctrl .tc{font-family:var(--mono); font-size:14px; color:var(--amber); margin-left:auto; padding:0 4px}
+  .vbtn{background:var(--panel2); border:1px solid var(--line2); color:var(--ink); width:42px; height:34px; font-family:var(--mono); font-size:13px; display:inline-flex; align-items:center; justify-content:center}
+  .vbtn.wide{width:auto; padding:0 10px}
+  .vbtn:hover{border-color:var(--mut)}
+  .vbtn.on{border-color:var(--amber); color:var(--amber)}
+
+  /* court */
+  .playerbar{display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; flex-wrap:wrap}
+  .playerbar .nm-in{width:120px}
+  .playerbar .btn{margin-left:auto}
+  .court-wrap{display:flex; flex-direction:column; align-items:center; gap:8px}
+  .fwall{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--dim)}
+  svg.court{width:100%; max-width:230px; height:auto; display:block; border-radius:6px; touch-action:manipulation}
+  .zone{fill:transparent; stroke:transparent; cursor:pointer}
+  .zone:hover{fill:rgba(242,169,59,.16)}
+  .zcell{pointer-events:none}
+  .zlab{font-family:var(--mono); font-size:12px; fill:#9c7b4e; pointer-events:none; opacity:.7}
+  .zone.src ~ .zlab, .src-fill{fill:rgba(242,169,59,.28)}
+  .src-fill{stroke:var(--amber); stroke-width:1.5}
+  .tgt-fill{fill:rgba(230,51,41,.30); stroke:var(--red); stroke-width:1.5}
+  .await svg.court{animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{filter:drop-shadow(0 0 0 rgba(230,51,41,0))}50%{filter:drop-shadow(0 0 7px rgba(230,51,41,.45))}}
+  @media(prefers-reduced-motion:reduce){.await svg.court{animation:none}}
+  .hint{font-family:var(--mono); font-size:12px; color:var(--mut); text-align:center; min-height:16px}
+  .hint b{color:var(--amber); font-weight:500}
+  .btn.gho.on{border-color:var(--amber); color:var(--amber)}
+  #kbWarn{display:none; font-family:var(--mono); font-size:11.5px; color:var(--bad); margin-left:8px}
+
+  /* tape — single-column ledger */
+  .gamepills{display:flex; gap:5px; margin-bottom:8px; flex-wrap:wrap}
+  .gpill{font-family:var(--mono); font-size:11.5px; padding:3px 9px; border-radius:6px; background:var(--panel2); border:1px solid var(--line2); color:var(--mut); cursor:pointer; display:inline-flex; align-items:center; gap:4px}
+  .gpill:hover{border-color:var(--mut)}
+  .gpill.on{background:var(--amber); border-color:var(--amber); color:#1a1205; font-weight:600}
+  .gpill .ld{width:5px; height:5px; border-radius:50%; background:var(--red); display:inline-block}
+  .tape{font-family:var(--mono); font-size:13px; line-height:1.6; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:8px 4px; flex:1 1 auto; min-height:64px; overflow-y:auto}
+  .tape-empty{color:var(--dim); padding:6px 10px; display:block}
+  .ledger{display:flex; flex-direction:column}
+  .shotrow{display:grid; grid-template-columns:22px 84px 1fr auto auto; gap:8px; align-items:center; padding:3px 10px; border-radius:5px; cursor:pointer}
+  .shotrow:hover{background:rgba(255,255,255,.05); box-shadow:inset 3px 0 0 var(--amber)}
+  .shotrow.sel{background:rgba(242,169,59,.16); outline:1px solid var(--amber)}
+  .shotrow.pend{opacity:.5}
+  .shotrow .sn{color:var(--dim); text-align:right}
+  .shotrow .pl{color:var(--amber); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .shotrow .pth{color:var(--mut)}
+  .shotrow .outmark{font-weight:700}
+  .flagmark{color:var(--bad); font-weight:800}
+  .incmark{color:var(--amber); font-weight:700}
+  .shotrow .rtc{color:var(--dim); font-size:11.5px; text-align:right}
+  .shotrow.w .outmark{color:var(--ok)} .shotrow.e .outmark{color:var(--bad)}
+  .shotrow.s .outmark{color:#A78BFA} .shotrow.l .outmark{color:var(--mut)}
+  .shotrow.n .outmark{color:#5AA9E6}
+  .shotrow.term.w .pth{color:var(--ok)}
+  .rallysum{font-family:var(--mono); font-size:12.5px; color:var(--mut); padding:5px 10px; cursor:pointer; border-radius:5px}
+  .rallysum:hover{background:rgba(255,255,255,.05); color:var(--ink); box-shadow:inset 3px 0 0 var(--amber)}
+  .rallysum.open{color:var(--amber)}
+  .rallyfoot{font-family:var(--mono); font-size:11.5px; color:var(--dim); padding:3px 10px 6px 38px}
+  .taildiv{border-top:1px dashed var(--line2); margin:4px 8px 6px}
+  .selbanner{font-family:var(--mono); font-size:12px; color:var(--amber); background:rgba(242,169,59,.14); border:1px solid rgba(242,169,59,.3); border-left:3px solid var(--amber); border-radius:7px; padding:6px 10px 6px 9px; margin-bottom:10px}
+  .selbanner .link{text-decoration:underline; cursor:pointer}
+  .selbanner .link.danger{color:var(--bad)}
+  .selbanner .selacts{display:flex; flex-wrap:wrap; gap:14px; margin-top:6px}
+
+  /* last shot editor */
+  .editor{margin-top:12px; border-top:1px dashed var(--line2); padding-top:12px}
+  .row{display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-bottom:9px}
+  .row .k{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); width:62px; flex:none}
+  .chip{background:var(--panel2); border:1px solid var(--line2); color:var(--ink); padding:6px 11px; font-size:13.5px; border-radius:7px}
+  .chip:hover{border-color:var(--mut)}
+  .chip.on{background:var(--amber); border-color:var(--amber); color:#1a1205; font-weight:600}
+  .chip.disabled{opacity:.3; cursor:default; pointer-events:none}
+  .chip.zedit{font-family:var(--mono)}
+  .chip.zedit.arm{border-color:var(--red); color:var(--red)}
+  /* end-rally outcome chips (Change 2): persistent colored tint per outcome semantic even at rest,
+     with the hotkey letter promoted to a large label and the outcome name demoted below it. Both
+     out-e buttons share the .out-e class (JS/CSS both key off it elsewhere) so the unforced/forced
+     tint distinction has to come from the data-o attribute, not a new class. */
+  #outcomeRow{gap:8px}
+  #outcomeRow .chip{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:7px 10px; min-width:46px}
+  #outcomeRow .oh{font-family:var(--mono); font-weight:800; font-size:17px; line-height:1; text-transform:uppercase}
+  #outcomeRow .on-name{font-family:var(--mono); font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--mut)}
+  #outcomeRow .chip.on .on-name{color:inherit; opacity:.85}
+  .out-w{background:rgba(82,183,136,.14); border-color:rgba(82,183,136,.4)}
+  .out-e[data-o="unforced_error"]{background:rgba(242,169,59,.14); border-color:rgba(242,169,59,.4)}
+  .out-e[data-o="forced_error"]{background:rgba(230,97,79,.14); border-color:rgba(230,97,79,.4)}
+  .out-s{background:rgba(167,139,250,.14); border-color:rgba(167,139,250,.4)}
+  .out-n{background:rgba(90,169,230,.14); border-color:rgba(90,169,230,.4)}
+  .out-l{background:rgba(139,147,160,.08); border-color:var(--line2)}
+  .out-w.on{background:var(--ok); border-color:var(--ok); color:#06241a}
+  .out-e.on{background:var(--bad); border-color:var(--bad); color:#2a0d08}
+  .out-e[data-o="unforced_error"].on{background:var(--amber); border-color:var(--amber); color:#1a1205}
+  .out-s.on{background:#A78BFA; border-color:#A78BFA; color:#1a0f2e}
+  .out-n.on{background:#5AA9E6; border-color:#5AA9E6; color:#08202f}
+  .out-l.on{background:var(--mut); border-color:var(--mut); color:#11151b}
+  .editor.empty{opacity:.4; pointer-events:none}
+
+  /* match controls */
+  .controls{margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 14px}
+  .controls summary{font-family:var(--mono); font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); cursor:pointer}
+  .controls summary:hover{color:var(--ink)}
+  .controls-body{display:flex; flex-direction:column; gap:9px; margin-top:12px}
+  .ctrl-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .ctrl-label{font-family:var(--mono); font-size:12.5px; color:var(--dim); min-width:200px}
+  /* match-controls only: labeled subsections with a thin divider between them */
+  #matchControls .ctrl-sub{font-family:var(--mono); font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); border-top:1px solid var(--line); padding-top:10px; margin-top:2px}
+  #matchControls .ctrl-sub:first-child{border-top:none; padding-top:0; margin-top:0}
+  .boBtn.on{border-color:var(--amber); color:var(--amber)}
+
+  /* data row */
+  .data{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:16px}
+  .data .note{font-family:var(--mono); font-size:11.5px; color:var(--dim); margin-left:auto}
+  .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--line2); padding:9px 16px; border-radius:9px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:9}
+  .toast.show{opacity:1}
+  kbd{font-family:var(--mono); font-size:12px; background:var(--panel2); border:1px solid var(--line2); border-radius:4px; padding:1px 5px; color:var(--mut)}
+  .legend{font-family:var(--mono); font-size:11.5px; color:var(--dim); margin-top:8px; line-height:1.6}
+
+  /* live analytics */
+  .anaStats{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-top:4px}
+  .anaTile{background:var(--panel2); border:1px solid var(--line2); border-radius:8px; padding:8px 10px}
+  .anaTile .lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim)}
+  .anaTile .val{font-family:var(--mono); font-size:15px; color:var(--ink); margin-top:2px}
+  .anaTile .val.a{color:var(--amber)} .anaTile .val.b{color:var(--red)}
+  .anaSection{margin-top:14px}
+  .anaSection h4{font-family:var(--mono); font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); margin:0 0 6px}
+  .anaPlayers{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start}
+  .anaPlayers > .anaCol > .anaSection:first-child, .anaPlayers > .anaSection:first-child{margin-top:0}
+  @media(max-width:720px){ .anaPlayers{grid-template-columns:1fr} }
+  .anaCourts{display:flex; gap:18px; flex-wrap:wrap}
+  .anaCourtCol{display:flex; flex-direction:column; align-items:center; gap:4px}
+  .anaCourtCol .cnm{font-family:var(--mono); font-size:12px; color:var(--mut)}
+  svg.anaCourt{width:150px; height:auto; display:block}
+  .anaCourt text{font-family:var(--mono); font-size:14px; fill:#1a1205; text-anchor:middle}
+  .anaMetricRow{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px}
+  .anaMomentum{display:flex; flex-wrap:wrap; gap:2px; margin-top:6px}
+  .anaMomentum .pt{display:flex; flex-direction:column; align-items:center; gap:1px}
+  .anaMomentum .pt i{font-style:normal; font-family:var(--mono); font-size:9px; color:var(--dim); line-height:1}
+  .anaMomentum .pt span{width:9px; height:9px; border-radius:2px; display:inline-block}
+  .anaBuckets{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+  .anaSeqList{font-family:var(--mono); font-size:13px; color:var(--ink); line-height:1.9}
+  .anaSeqList .cnt{color:var(--dim)}
+
+  /* ---------- guided tour ---------- */
+  .tourOverlay{position:fixed; inset:0; z-index:50; background:rgba(10,13,18,.88); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px}
+  .tourCard{width:100%; max-width:1320px; max-height:calc(100vh - 40px); overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:14px; display:grid; grid-template-columns:1.7fr 1fr; gap:0; box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  @media(max-width:960px){ .tourCard{grid-template-columns:1fr} }
+  .tourPane{padding:20px}
+  .tourPaneMedia{padding:12px; background:var(--panel2); border-right:1px solid var(--line2); display:flex; align-items:center; justify-content:center; min-height:200px}
+  @media(max-width:960px){ .tourPaneMedia{border-right:none; border-bottom:1px solid var(--line2)} }
+  .tourMedia{width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; background:#000; border-radius:10px; overflow:hidden}
+  .tourMedia iframe{width:100%; height:100%; display:block; border:0}
+  .tourMediaPlaceholder{font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .tourPaneStep{display:flex; flex-direction:column; gap:10px}
+  .tourStepTitle{font-family:var(--display); font-weight:700; font-size:18px; color:var(--ink)}
+  .tourStepBody{font-family:var(--body); font-size:14.5px; line-height:1.6; color:var(--mut)}
+  .tourStepBody b{color:var(--ink)}
+  .tourCourt:empty{display:none}
+  .tourCourt{display:flex; justify-content:center; margin:10px 0 0}
+  .tourCourt svg.court{max-width:210px}
+  #tourFrame{width:100%; height:100%; border:0; display:block}
+  .tourDots{display:flex; gap:6px; justify-content:center; margin-top:14px}
+  .tourDot{width:7px; height:7px; border-radius:50%; background:var(--line2); display:inline-block}
+  .tourDot.on{background:var(--amber)}
+  .tourControls{display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:18px}
+  .tourControls .btn:disabled{opacity:.35; cursor:default; pointer-events:none}
+
+  /* mock stats table on the closing analytics step */
+  .tourStats{display:grid; grid-template-columns:1fr auto auto; gap:5px 16px; margin-top:12px; padding:10px 12px;
+    background:var(--panel2); border:1px solid var(--line2); border-radius:8px;
+    font-family:var(--mono); font-size:12.5px; color:var(--mut)}
+  .tourStats .tsH{color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.08em}
+  .tourStats .tsV{color:var(--ink); text-align:right}
+  .tourStats.tsSeq{grid-template-columns:1fr; gap:3px}
+  .tourStats.tsSeq .tsH{margin-top:4px}
+  .tourStats.tsSeq .tsH:first-child{margin-top:0}
+  .tourStats .cnt{color:var(--dim); font-style:normal}
+
+  /* mono keycap, matching the .oh outcome-hotkey aesthetic — used by later steps to illustrate w/u/f/n/l/s */
+  .keycap{display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; padding:0 7px; font-family:var(--mono); font-weight:800; font-size:15px; color:var(--ink); background:var(--panel2); border:1px solid var(--line2); border-radius:6px; box-shadow:0 2px 0 var(--line2); cursor:pointer; user-select:none}
+  .keycap:active{transform:translateY(1px); box-shadow:0 1px 0 var(--line2)}
+
+  /* target/feedback states for the demo court (Task B wires these onto zone rects) */
+  @keyframes tour-pulse{
+    0%,100%{ fill:rgba(242,169,59,.28); stroke:var(--amber); stroke-width:2 }
+    50%{ fill:rgba(242,169,59,.5); stroke:var(--amber); stroke-width:3 }
+  }
+  .tour-pulse{ animation:tour-pulse 1.1s ease-in-out infinite }
+  @media(prefers-reduced-motion:reduce){ .tour-pulse{animation:none; fill:rgba(242,169,59,.4); stroke:var(--amber); stroke-width:2} }
+
+  @keyframes tour-flash-ok{
+    0%{ fill:rgba(82,183,136,.65); stroke:var(--ok) }
+    100%{ fill:transparent; stroke:transparent }
+  }
+  .tour-flash-ok{ animation:tour-flash-ok .5s ease-out }
+
+  @keyframes tour-flash-bad{
+    0%,100%{ transform:translateX(0) }
+    20%{ transform:translateX(-4px) }
+    40%{ transform:translateX(4px) }
+    60%{ transform:translateX(-3px) }
+    80%{ transform:translateX(3px) }
+  }
+  .tour-flash-bad{ animation:tour-flash-bad .35s ease-in-out; fill:rgba(230,97,79,.5); stroke:var(--bad) }
+
+  /* floating guide hand — absolutely positioned in the fixed overlay, so client coords from
+     getBoundingClientRect() map straight onto left/top (see updateHand in tour.js). The glyph's
+     fingertip sits at its top-centre: translate(-50%,0) puts the tip on the target point, and the
+     animation bobs it away/back to read as a tap. */
+  .tourHand{position:absolute; z-index:2; display:none; font-size:28px; line-height:1; pointer-events:none;
+    transform:translate(-50%,0); filter:drop-shadow(0 3px 6px rgba(0,0,0,.55));
+    animation:tour-hand-tap 1.1s ease-in-out infinite}
+  @keyframes tour-hand-tap{
+    0%,100%{ margin-top:12px }
+    45%{ margin-top:0 }
+    60%{ margin-top:9px }
+  }
+  @media(prefers-reduced-motion:reduce){ .tourHand{animation:none; margin-top:4px} }
+  .anaEmpty{font-family:var(--mono); font-size:12.5px; color:var(--dim); padding:6px 2px}
