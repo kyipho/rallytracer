@@ -88,6 +88,16 @@ var steps = [
     video:null, expect:null, hideCourt:true, onEnter:onStepEnter
   },
   {
+    title:'Name the players',
+    html:'Every stat is reported per player, so set the names before you tag. They live in the <b>scoreboard</b> on the video panel &mdash; click a name field and type. Rename either side any time; the tape and analytics follow.'+
+      '<div class="scoreboard" style="justify-content:center; margin-top:14px" aria-hidden="true">'+
+        '<div class="sc"><input type="text" class="nm-in" value="Nick Matthew" readonly style="border-color:var(--amber); color:var(--ink)"><span class="pts">7</span></div>'+
+        '<span class="vs">vs</span>'+
+        '<div class="sc"><input type="text" class="nm-in" value="Ramy Ashour" readonly><span class="pts">9</span></div>'+
+      '</div>',
+    video:null, expect:null, hideCourt:true, onEnter:onStepEnter
+  },
+  {
     title:'Done',
     html:'Press <b>z</b> to undo, click any tape row to review or edit it, and the <b>?</b> button reopens this tour any time.',
     video:null, expect:null, onEnter:onStepEnter

@@ -66,7 +66,13 @@
   .card-h{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-bottom:1px solid var(--line)}
   .card-h .t{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut)}
   .card-b{padding:14px}
-  #tagCard{position:relative; grid-column:2; grid-row:2; display:flex; flex-direction:column}
+  /* cap the tagging panel to the video card's height so a long rally can't push the page past the
+     viewport — the tape (flex:1 1 auto, overflow-y:auto below) scrolls internally instead. The cap
+     mirrors the video card's rendered height: video-frame (100dvh - --chrome-h) + its own chrome
+     (card-h scoreboard + transport + legend + paddings ≈ 178). Tracks --chrome-h so layout changes
+     stay in one place. */
+  #tagCard{position:relative; grid-column:2; grid-row:2; display:flex; flex-direction:column;
+    max-height:calc(100vh - var(--chrome-h) + 178px); max-height:calc(100dvh - var(--chrome-h) + 178px)}
   #tagCard > .card-b{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
   #tagCard .court-wrap, #tagCard #gamePills, #tagCard #editor{flex:0 0 auto}
   .strokePop{position:absolute; z-index:5; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--panel2); border:1px solid var(--line2); border-radius:10px; padding:14px 16px; font-family:var(--mono); font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.5); text-align:center}

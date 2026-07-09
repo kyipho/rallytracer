@@ -26,8 +26,11 @@ S.seekLead = loadSeekLead();
 S.soundOn = loadSound();
 S.autoResume = loadAutoResume();
 
-// the YouTube iframe api (a classic script in index.html) calls this global once it's ready
+// the YouTube iframe api (a classic script in index.html) calls this global once it's ready. It can
+// fire before this deferred module assigns the global (losing the event), so if YT is already loaded
+// we run the callback ourselves to recover it — otherwise the player is never created (black frame).
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+if(window.YT && window.YT.Player) onYouTubeIframeAPIReady();
 
 // ---------- wire up ----------
 document.getElementById('loadBtn').addEventListener('click',function(){
