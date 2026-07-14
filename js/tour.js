@@ -18,7 +18,10 @@ export var TOUR_CLIP = { videoId:'sG9p_nd_sDU', start:43, end:50 };
 // Each step: {title, html, video:{from,to}|null, expect, onEnter}.
 // video:{from,to} is a clip segment: on entering that phase the player loads and plays from
 // `from` and stops at `to` (armed endSeconds), waiting there for the user's action.
-// Seq items may carry their own video segment, consumed as the sequence progresses.
+// Seq items may carry their own video segment, consumed as the sequence progresses. A seq can play
+// as one continuous clip: the first item loads (with {endAt} = the final pause mark so it doesn't
+// self-stop early) and the rest carry {to, resume:true}, which just resumes playback to the next
+// pause instead of reloading — one rally that parks at each strike, not separate snippets.
 // expect shapes:
 //   null                          — info step, "next" advances unconditionally
 //   {type:'zone', zones:[...]}    — advance when tourZoneTap() is called with a listed zone
@@ -29,11 +32,11 @@ export var TOUR_CLIP = { videoId:'sG9p_nd_sDU', start:43, end:50 };
 var steps = [
   {
     title:'Welcome',
-    html:'RallyTracer allows you to tag shot-by-shot data in a squash match. In the next page, the player on the left will show a rally, and you will tag it on the right.',
+    html:'RallyTracer allows you to tag shot-by-shot data in a squash match. In the next page, the window on the left will show a rally, and you will tag it on the right.',
     video:null, expect:null, onEnter:onStepEnter
   },
   {
-    title:'The serve',
+    title:'Try it out: Tagging the serve',
     html:'Tap the <b>side</b> the serve is struck from.',
     video:{from:43, to:44.5},
     expect:{type:'zone', zones:['FR','BR']},
@@ -41,11 +44,15 @@ var steps = [
   },
   {
     title:'Tagging strikes',
-    html:'As each shot is hit, tap the zone where the ball is <b>struck</b> &mdash; not where it lands. The clip in this guide pauses after each shot; your tap rolls it on.',
+    html:'As each shot is hit, tap the zone where the ball is <b>struck</b> &mdash; not where it lands. The clip in this guide pauses after each shot, and it will continue after you tap the strike zone.',
+    // one continuous clip, not three snippets: the first phase loads from 45 with endSeconds armed
+    // at the *last* strike (48.7) so the load doesn't self-stop early; the poll parks it at each
+    // strike's `to`, and resume:true phases just playVideo() onward — no reload, so it reads as one
+    // uninterrupted rally that pauses at each strike and continues on the tap.
     expect:{type:'seq', items:[
-      {type:'zone', zones:['BL'], video:{from:45, to:46.4}},
-      {type:'zone', zones:['BL'], video:{from:47, to:47.7}},
-      {type:'zone', zones:['BL'], video:{from:48, to:48.7}}
+      {type:'zone', zones:['BL'], video:{from:45, to:46.4, endAt:48.7}},
+      {type:'zone', zones:['BL'], video:{to:47.7, resume:true}},
+      {type:'zone', zones:['BL'], video:{to:48.7, resume:true}}
     ]},
     video:null,
     onEnter:onStepEnter
@@ -109,6 +116,7 @@ var cursor = 0;
 var overlayEl = null;
 var tourPlayer = null; // the tour's own YT.Player, independent of js/youtube.js's module-private one
 var playerReady = false;
+var hasPlayed = false;  // true once the clip has reached PLAYING at least once — gates the loading spinner
 var pendingSeg = null; // segment requested before the player finished initializing
 var pollTimer = null;  // watches getCurrentTime() to pause just before the segment's `to` mark
 var activeSeg = null;  // segment currently loaded (its endSeconds is armed in the player)
@@ -125,6 +133,7 @@ export function openTour(){
   if(overlayEl) return; // already open
   cursor = 0;
   seqProgress = 0;
+  hasPlayed = false;
   buildOverlay();
   buildDemoCourt();
   installKeyIsolation();
@@ -142,6 +151,7 @@ function closeTour(){
   activeSeg = null;
   holding = false;
   playerReady = false;
+  hasPlayed = false;
   if(tourPlayer){ try{ tourPlayer.destroy(); }catch(_){} tourPlayer = null; }
   if(overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
   overlayEl = null;
@@ -207,7 +217,7 @@ function buildOverlay(){
   overlayEl.innerHTML =
     '<div class="tourCard">' +
       '<div class="tourPane tourPaneMedia">' +
-        '<div id="tourMedia" class="tourMedia"><span class="tourMediaPlaceholder">demo clip coming soon</span></div>' +
+        '<div id="tourMedia" class="tourMedia"><div class="tourSpinner" aria-hidden="true" style="display:none">Loading clip&hellip;</div><span class="tourMediaPlaceholder">demo clip coming soon</span></div>' +
       '</div>' +
       '<div class="tourPane tourPaneStep">' +
         '<div class="tourStepTitle" id="tourStepTitle"></div>' +
@@ -493,8 +503,12 @@ function playSegment(seg){
   // being flaky, so the poll below is the primary stop and endSeconds the backstop. Never call
   // seekTo() while a segment is armed — per the docs it invalidates endSeconds, and from any
   // non-paused state it also *starts playback*.
+  // seg.resume: continue the already-loaded clip from where it paused (no reload), so a multi-phase
+  // step reads as one uninterrupted rally rather than separate snippets. seg.endAt: the load's
+  // endSeconds when it must sit past this phase's `to` (a later resume phase runs on to it).
   try{
-    tourPlayer.loadVideoById({ videoId:TOUR_CLIP.videoId, startSeconds:seg.from, endSeconds:seg.to });
+    if(seg.resume){ tourPlayer.playVideo(); }
+    else { tourPlayer.loadVideoById({ videoId:TOUR_CLIP.videoId, startSeconds:seg.from, endSeconds:(seg.endAt||seg.to) }); }
     tourPlayer.setPlaybackRate(seg.rate||1); // rate<1 stretches the wall-clock time of the segment
   }catch(_){ return; }
   killCaptions(tourPlayer);
@@ -524,20 +538,46 @@ function killCaptions(p){
   try{ p.unloadModule('cc'); }catch(_){}
 }
 
+// media-pane element toggles — the pane shows exactly one of: spinner (clip loading), placeholder
+// text (no clip / unavailable), or the live iframe (clip up). Guarded so they no-op before build.
+function setSpinner(on){
+  var sp = overlayEl && overlayEl.querySelector('.tourSpinner');
+  if(sp) sp.style.display = on ? '' : 'none';
+}
+function setPlaceholder(on, text){
+  var ph = overlayEl && overlayEl.querySelector('.tourMediaPlaceholder');
+  if(!ph) return;
+  if(text!=null) ph.textContent = text;
+  ph.style.display = on ? '' : 'none';
+}
+function setMediaVideoVisible(on){
+  var f = overlayEl && overlayEl.querySelector('#tourMedia iframe');
+  if(f) f.style.display = on ? 'block' : 'none';
+}
+
 function updateVideoPane(step){
   var mediaEl = overlayEl && overlayEl.querySelector('#tourMedia');
   if(!mediaEl) return;
-  var placeholder = mediaEl.querySelector('.tourMediaPlaceholder');
   if(!TOUR_CLIP.videoId || !window.YT || !window.YT.Player){
     // no clip configured or iframe API unavailable — placeholder, no errors
-    if(placeholder) placeholder.style.display = '';
+    setSpinner(false); setMediaVideoVisible(false);
+    setPlaceholder(true, 'demo clip coming soon');
     return;
   }
-  if(placeholder) placeholder.style.display = 'none'; // clip configured — pane stays blank until a segment plays
+  if(!stepUsesVideo(step)){
+    // this step drives no clip — show a plain placeholder so the user knows not to expect one, and
+    // hide any paused frame left over from an earlier clip step
+    setSpinner(false); setMediaVideoVisible(false);
+    setPlaceholder(true, 'No clip for this step');
+    if(tourPlayer){ pendingSeg = null; stopSegmentPoll(); holding = true; try{ tourPlayer.pauseVideo(); }catch(_){} }
+    return;
+  }
+  // a clip step: placeholder off; spinner covers the wait until the first PLAYING (then never again)
+  setPlaceholder(false);
   if(!tourPlayer){
     // no embed until a step actually plays a clip — on the welcome step there'd be nothing but a
     // clickable cued player, which invites a stray "play" outside the scripted segments
-    if(!stepUsesVideo(step)) return;
+    setSpinner(true);
     var div = document.createElement('div');
     div.id = 'tourPlayerDiv';
     mediaEl.appendChild(div);
@@ -564,8 +604,9 @@ function updateVideoPane(step){
             return;
           }
           // captions reload with each new video; the module is only live once playback starts,
-          // so re-kill it here (not just at load time in playSegment).
-          if(e.data===YT.PlayerState.PLAYING) killCaptions(e.target);
+          // so re-kill it here (not just at load time in playSegment). PLAYING also means the clip
+          // is up — drop the loading spinner and remember we've played (later loads skip the spinner).
+          if(e.data===YT.PlayerState.PLAYING){ hasPlayed = true; setSpinner(false); killCaptions(e.target); }
           // holding rule: while parked, any PLAYING that sneaks through (a seek finishing after
           // pauseVideo, an end-screen restart) is paused again — pause always wins.
           if(e.data===YT.PlayerState.PLAYING && holding){
@@ -573,9 +614,9 @@ function updateVideoPane(step){
           }
         },
         'onError':function(e){
-          // surface embed failures (embedding disabled, region block …) instead of a dead pane
-          var ph = overlayEl && overlayEl.querySelector('.tourMediaPlaceholder');
-          if(ph){ ph.textContent = 'clip unavailable (YouTube error '+e.data+')'; ph.style.display=''; }
+          // surface embed failures (embedding disabled, region block …) instead of a dead spinner
+          setSpinner(false); setMediaVideoVisible(false);
+          setPlaceholder(true, 'clip unavailable (YouTube error '+e.data+')');
         }
       }
     });
@@ -585,15 +626,13 @@ function updateVideoPane(step){
     ensureReadyWatch();
     return;
   }
+  // player already exists and this step has a clip — reveal it (it may have been hidden on a
+  // no-clip step) and show the spinner only if we haven't successfully played yet
+  setMediaVideoVisible(true);
+  setSpinner(!hasPlayed);
   var seg = currentSegment(step);
   if(seg){
     playSegment(seg);
-  } else if(!stepUsesVideo(step)){
-    // steps with no clip involvement park the video on its last pause frame
-    pendingSeg = null;
-    stopSegmentPoll();
-    holding = true;
-    try{ tourPlayer.pauseVideo(); }catch(_){}
   }
   // else: a mid-step phase with no segment of its own (e.g. the landing tap after `w`) — leave
   // the running segment to finish to its pause mark

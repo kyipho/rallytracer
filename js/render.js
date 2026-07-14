@@ -86,7 +86,7 @@ function renderTape(){
       var isExp=S.expandedRally && S.expandedRally.g===vg.no && S.expandedRally.r===r.no;
       var head='<div class="rallysum'+(isExp?' open':'')+'" data-toggle-g="'+vg.no+'" data-toggle-r="'+r.no+'">'
         +(isExp?'▾ ':'▸ ')+'R'+r.no+' · '+r.shots.length+' shots · '+rallySummaryText(r)+' · '+scoreAfterRally(vg,r)
-        +' · <span class="link" data-clear-g="'+vg.no+'" data-clear-r="'+r.no+'">clear</span></div>';
+        +' · <span class="link clearx" data-clear-g="'+vg.no+'" data-clear-r="'+r.no+'" title="Clear rally" aria-label="Clear rally">&times;</span></div>';
       return isExp ? head+'<div class="ledger">'+rallyShotsHtml(vg.no,r)+'</div>' : head;
     }).join('')+'</div><div class="taildiv"></div>';
   }

@@ -165,6 +165,8 @@
   .rallysum{font-family:var(--mono); font-size:12.5px; color:var(--mut); padding:5px 10px; cursor:pointer; border-radius:5px}
   .rallysum:hover{background:rgba(255,255,255,.05); color:var(--ink); box-shadow:inset 3px 0 0 var(--amber)}
   .rallysum.open{color:var(--amber)}
+  .rallysum .clearx{cursor:pointer; color:var(--dim); font-size:14px; line-height:1; padding:0 3px; border-radius:4px}
+  .rallysum .clearx:hover{color:var(--bad); background:rgba(255,255,255,.08)}
   .rallyfoot{font-family:var(--mono); font-size:11.5px; color:var(--dim); padding:3px 10px 6px 38px}
   .taildiv{border-top:1px dashed var(--line2); margin:4px 8px 6px}
   .selbanner{font-family:var(--mono); font-size:12px; color:var(--amber); background:rgba(242,169,59,.14); border:1px solid rgba(242,169,59,.3); border-left:3px solid var(--amber); border-radius:7px; padding:6px 10px 6px 9px; margin-bottom:10px}
@@ -234,7 +236,7 @@
   .anaSection{margin-top:14px}
   .anaSection h4{font-family:var(--mono); font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); margin:0 0 6px}
   .anaPlayers{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start}
-  .anaPlayers > .anaCol > .anaSection:first-child, .anaPlayers > .anaSection:first-child{margin-top:0}
+  .anaPlayers > .anaCol > .anaSection:first-child, .anaPlayers > .anaSection{margin-top:0}
   @media(max-width:720px){ .anaPlayers{grid-template-columns:1fr} }
   .anaCourts{display:flex; gap:18px; flex-wrap:wrap}
   .anaCourtCol{display:flex; flex-direction:column; align-items:center; gap:4px}
@@ -257,9 +259,12 @@
   .tourPane{padding:20px}
   .tourPaneMedia{padding:12px; background:var(--panel2); border-right:1px solid var(--line2); display:flex; align-items:center; justify-content:center; min-height:200px}
   @media(max-width:960px){ .tourPaneMedia{border-right:none; border-bottom:1px solid var(--line2)} }
-  .tourMedia{width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; background:#000; border-radius:10px; overflow:hidden}
+  .tourMedia{position:relative; width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; background:#000; border-radius:10px; overflow:hidden}
   .tourMedia iframe{width:100%; height:100%; display:block; border:0}
   .tourMediaPlaceholder{font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .tourSpinner{position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; font-family:var(--mono); font-size:12px; color:var(--dim)}
+  .tourSpinner::before{content:''; width:30px; height:30px; border-radius:50%; border:3px solid var(--line2); border-top-color:var(--amber); animation:tourSpin .8s linear infinite}
+  @keyframes tourSpin{to{transform:rotate(360deg)}}
   .tourPaneStep{display:flex; flex-direction:column; gap:10px}
   .tourStepTitle{font-family:var(--display); font-weight:700; font-size:18px; color:var(--ink)}
   .tourStepBody{font-family:var(--body); font-size:14.5px; line-height:1.6; color:var(--mut)}
