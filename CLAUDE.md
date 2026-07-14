@@ -19,6 +19,7 @@ There are no tests and no linter. Verify changes by loading the app in a browser
 - `index.html` — all static markup (court SVG shell, scoreboard, editor, analytics/match-controls panels).
 - `css/styles.css` — the only stylesheet. Sections are marked with `/* ---------- name ---------- */` comments; append to the matching section.
 - `js/` — one module per concern:
+  - `main.js` — entry point (`<script type="module">`, deferred so the DOM is ready): registers the render callback, loads persisted state, assigns the global YouTube API callback, and wires every DOM listener / keyboard shortcut / event-delegation handler (e.g. `data-clear-g` tape actions) to the mutator modules, then boots with an initial render.
   - `state.js` — the shared mutable store `S` (`S.M` is the match model, the single source of truth) plus pure readers (`curGame`, `focusRally`, `nm`, …) and the `requestRender()` callback that breaks the mutator→render import cycle.
   - `model.js` — match/game/rally constructors, zone helpers, stroke vocabulary. Schema version lives on the match object (`schema:3`).
   - `court.js` — live court SVG zones + tap handling. Geometry constants: viewBox `0 0 300 360`, cols x=[6,150] w=144, rows y=[6,186] h=[180,168].
