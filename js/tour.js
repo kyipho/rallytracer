@@ -105,6 +105,16 @@ var steps = [
     video:null, expect:null, hideCourt:true, onEnter:onStepEnter
   },
   {
+    title:'Videos are optional',
+    html:'The YouTube replay is only here for convenience. Prefer a non-YouTube video? Just play it in any separate player or window, watch alongside, and tag every shot here as normal. The court, keys, and analytics behave exactly the same with or without a clip loaded.',
+    video:null, expect:null, hideCourt:true, onEnter:onStepEnter
+  },
+  {
+    title:'Save & share your data',
+    html:'Your match autosaves to this browser, but you can also take it with you. The <b>data</b> row under the analytics has <b>Export JSON</b> / <b>Export CSV</b> to download the match &mdash; back it up, open it in a spreadsheet, or hand it to someone else. <b>Import JSON</b> / <b>Import CSV</b> loads a downloaded match back in (replacing the current one), so you can pick up where you left off on another machine.',
+    video:null, expect:null, hideCourt:true, onEnter:onStepEnter
+  },
+  {
     title:'Done',
     html:'Press <b>z</b> to undo, click any tape row to review or edit it, and the <b>?</b> button reopens this tour any time.',
     video:null, expect:null, onEnter:onStepEnter
@@ -239,10 +249,9 @@ function buildOverlay(){
   overlayEl.querySelector('#tourSkip').addEventListener('click', closeTour);
   overlayEl.querySelector('#tourBack').addEventListener('click', back);
   overlayEl.querySelector('#tourNext').addEventListener('click', function(){
-    var step = steps[cursor];
-    if(!step.expect) advance(); // info steps: next always advances
-    // steps with an expect wait for the real action (zone tap / key) — "next" is a no-op there,
-    // matching the plan's "do it" style; Task B/C may relax this per-step if desired.
+    // Next always advances now — even on "do it" steps the user can skip ahead rather than being
+    // forced to perform the action. The zone-tap / key action still advances too.
+    advance();
   });
 }
 
@@ -267,11 +276,11 @@ export function renderStep(){
   backBtn.disabled = cursor===0;
   var nextBtn = overlayEl.querySelector('#tourNext');
   nextBtn.textContent = cursor===steps.length-1 ? 'Start tagging' : 'Next';
-  // "do it" steps (expect != null) advance only via the action itself — Next is greyed out so
-  // the user isn't tempted to click it.
-  nextBtn.disabled = !!step.expect;
-  nextBtn.classList.toggle('gho', !!step.expect);
-  nextBtn.classList.toggle('pri', !step.expect);
+  // Next is always enabled — "do it" steps still respond to the real action, but the user can also
+  // click Next to skip ahead instead of being blocked.
+  nextBtn.disabled = false;
+  nextBtn.classList.remove('gho');
+  nextBtn.classList.add('pri');
   if(typeof step.onEnter === 'function') step.onEnter(step);
 }
 
